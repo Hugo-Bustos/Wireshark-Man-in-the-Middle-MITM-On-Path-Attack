@@ -31,24 +31,26 @@ El atacante aprovecha la falta de autenticación del protocolo ARP para suplanta
 
 ```text
 arp.opcode == 2 && arp.src.proto_ipv4 == 192.168.10.1 && eth.src != 02:aa:bb:cc:00:01
-
+```
 Hallazgos:
 El filtro expuso una inundación de respuestas ARP gratuitas provenientes de la dirección MAC 02:fe:fe:fe:55:55. Wireshark detectó explícitamente un conflicto de IP duplicada, confirmando el ARP Spoofing.
+
 ### Fase 2: Rastreando la Redirección DNS (DNS Spoofing)
 
 Con el atacante posicionado en la red, procedí a auditar las consultas hacia el portal corporativo (corp-login.acme-corp.local). Apliqué un filtro para buscar resoluciones DNS que provinieran de una fuente no autorizada (distinta al servidor 8.8.8.8):
-Plaintext
 
+```text
 dns.flags.response == 1 && ip.src != 8.8.8.8 && dns.qry.name == "corp-login.acme-corp.local"
-
+```
 Hallazgos:
 Se detectó una respuesta DNS falsificada enviada por la IP del atacante (192.168.10.55). La víctima, al intentar acceder al portal legítimo, fue redirigida al servidor del atacante.
 ### Fase 3: Evidencia de SSL Stripping y Robo de Credenciales
 
 Para verificar la degradación del cifrado de la conexión, filtré el tráfico web buscando el envío del formulario de inicio de sesión (método POST) hacia el dominio corporativo:
-Plaintext
 
+```text
 http.request.method == "POST" && http.host == "corp-login.acme-corp.local"
+```
 
 Hallazgos:
 La conexión carecía de handshakes TLS. Al inspeccionar el paquete HTTP POST interceptado por el atacante, los parámetros application/x-www-form-urlencoded mostraron el usuario y la contraseña de la víctima expuestos en texto plano, confirmando el compromiso total.
