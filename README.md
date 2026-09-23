@@ -29,30 +29,30 @@ A través del análisis de capturas de paquetes (`.pcap`) utilizando **Wireshark
 ### Fase 1: Detectando el Envenenamiento ARP (Intercepción)
 El atacante aprovecha la falta de autenticación del protocolo ARP para suplantar a la puerta de enlace predeterminada (`192.168.10.1`). Para aislar al atacante y excluir la dirección MAC legítima del router (`02:aa:bb:cc:00:01`), utilicé el siguiente filtro:
 
-```text
+```
 arp.opcode == 2 && arp.src.proto_ipv4 == 192.168.10.1 && eth.src != 02:aa:bb:cc:00:01
 ```
-Hallazgos:
+**Hallazgos:**
 El filtro expuso una inundación de respuestas ARP gratuitas provenientes de la dirección MAC 02:fe:fe:fe:55:55. Wireshark detectó explícitamente un conflicto de IP duplicada, confirmando el ARP Spoofing.
 
 ### Fase 2: Rastreando la Redirección DNS (DNS Spoofing)
 
 Con el atacante posicionado en la red, procedí a auditar las consultas hacia el portal corporativo (corp-login.acme-corp.local). Apliqué un filtro para buscar resoluciones DNS que provinieran de una fuente no autorizada (distinta al servidor 8.8.8.8):
 
-```text
+```
 dns.flags.response == 1 && ip.src != 8.8.8.8 && dns.qry.name == "corp-login.acme-corp.local"
 ```
-Hallazgos:
+**Hallazgos:**
 Se detectó una respuesta DNS falsificada enviada por la IP del atacante (192.168.10.55). La víctima, al intentar acceder al portal legítimo, fue redirigida al servidor del atacante.
 ### Fase 3: Evidencia de SSL Stripping y Robo de Credenciales
 
 Para verificar la degradación del cifrado de la conexión, filtré el tráfico web buscando el envío del formulario de inicio de sesión (método POST) hacia el dominio corporativo:
 
-```text
+```
 http.request.method == "POST" && http.host == "corp-login.acme-corp.local"
 ```
 
-Hallazgos:
+**Hallazgos:**
 La conexión carecía de handshakes TLS. Al inspeccionar el paquete HTTP POST interceptado por el atacante, los parámetros application/x-www-form-urlencoded mostraron el usuario y la contraseña de la víctima expuestos en texto plano, confirmando el compromiso total.
 
 ## Conclusiones y Medidas de Mitigación
@@ -64,3 +64,13 @@ Este incidente subraya el riesgo de la confianza implícita en las redes de áre
     Contra DNS Spoofing: Implementar DNSSEC para requerir firmas criptográficas en los registros DNS.
 
     Contra SSL Stripping: Configurar HSTS (HTTP Strict Transport Security) en todos los servidores web, forzando a los navegadores a rechazar conexiones HTTP no cifradas.
+
+```
+ |\_/|    
+ (. .)
+  =w= (\  
+ / ^ \//  Atte Hev.
+(|| ||)
+,""_""_ .
+```
+
